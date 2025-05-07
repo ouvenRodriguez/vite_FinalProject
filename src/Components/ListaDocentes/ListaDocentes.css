@@ -1,0 +1,18 @@
+.list-item {
+  cursor: pointer; 
+  border-radius: 4px; 
+  padding: 10px;
+  transition: background-color 0.3s ease;
+  
+}
+
+.list-item:hover {
+  background-color: #e0e0e0; 
+}
+
+.list-item:active {
+  background-color: #d6d6d6; 
+}
+
+
+

@@ -2,10 +2,10 @@
     display: flex;
     height: 100vh;
     flex-wrap: nowrap;
-    justify-content:right;
-    color: #fff;
+    justify-content: center;
+    align-items: center;
     font-family: 'Poppins', sans-serif;
-    background-image: url(/Register.png);
+    background-image: url(/register.png);
     background-repeat: no-repeat;
     background-size: cover;
     background-attachment: fixed;

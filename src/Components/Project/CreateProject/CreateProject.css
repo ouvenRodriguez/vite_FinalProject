@@ -1,0 +1,51 @@
+#container {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
+  font-family: 'Poppins', sans-serif;
+  gap: 24px;
+  padding: 16px;
+  max-width: 1000px;
+  margin: auto;
+}
+
+.row-two,
+.row-full,
+.row-three {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding-bottom: 30px;
+}
+
+.row-two .MuiTextField-root {
+  flex: 1 1 48%;
+  min-width: 250px;
+}
+
+.row-full .MuiTextField-root {
+  flex: 1 1 100%;
+}
+
+.row-three .MuiTextField-root {
+  flex: 1 1 30%;
+  min-width: 200px;
+}
+
+.student-item {
+  transition: background 0.2s, transform 0.2s;
+}
+
+.student-item:hover,
+.student-selected {
+  background: #1976d2;
+  transform: scale(1.03);
+  color: white;
+  transition: background 0.2s, transform 0.2s;
+}
+
+.student-item:hover .student-secondary,
+.student-selected .student-secondary {
+  color: white !important;
+}

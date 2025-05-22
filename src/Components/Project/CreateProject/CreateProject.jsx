@@ -1,10 +1,9 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Container,
   Typography,
   TextField,
   Button,
-  Box,
   List,
   ListItem,
   ListItemText,
@@ -22,11 +21,15 @@ import {
 } from "@mui/material";
 import DeleteIcon from "@mui/icons-material/Delete";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import PersonIcon from "@mui/icons-material/Person";
 import Calendar from "../../Calendar/Calendar";
-import dayjs from "dayjs";
+import { createProject } from "../../../Api/Project";
+import { getAllStudents } from "../../../Api/user";
 import "./CreateProject.css";
-
+import { useNavigate } from "react-router-dom";
 const CreateProject = () => {
+  const navigate = useNavigate();
+  // Estado para guardar los datos del formulario
   const [formData, setFormData] = useState({
     title: "",
     area: "",
@@ -40,83 +43,141 @@ const CreateProject = () => {
     observations: "",
   });
 
-  const [memberForm, setMemberForm] = useState({
-    name: "",
-    lastName: "",
-    id: "",
-    grade: "",
-  });
-
+  // Estado para la lista de estudiantes y miembros del equipo
+  const [students, setStudents] = useState([]);
   const [teamMembers, setTeamMembers] = useState([]);
-
-  const [students, setStudents] = useState([
-    { name: "Ana Torres", id: "1001", grade: "10°", avatar: "/static/images/avatar/1.jpg" },
-    { name: "Luis Gómez", id: "1002", grade: "11°", avatar: "/static/images/avatar/2.jpg" },
-    { name: "María López", id: "1003", grade: "9°", avatar: "/static/images/avatar/3.jpg" },
-  ]);
   const [selectedStudent, setSelectedStudent] = useState(null);
+  const [studentSearch, setStudentSearch] = useState("");
 
+  // Cargar estudiantes al iniciar el componente
+  useEffect(() => {
+    const loadStudents = async () => {
+      try {
+        const response = await getAllStudents();
+        if (response.success) {
+          setStudents(response.body.data);
+        }
+      } catch (error) {
+        console.error("Error al cargar estudiantes:", error);
+      }
+    };
+    loadStudents();
+  }, []);
+
+  // Función para manejar cambios en los campos del formulario
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setFormData({
+      ...formData,
+      [name]: value
+    });
   };
 
+  // Función para manejar cambios en las fechas
   const handleDateChange = (type, date) => {
-    setFormData((prev) => ({
-      ...prev,
+    setFormData({
+      ...formData,
       schedule: {
-        ...prev.schedule,
+        ...formData.schedule,
         [type]: date
       }
-    }));
+    });
   };
 
-  const handleMemberChange = (e) => {
-    const { name, value } = e.target;
-    setMemberForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
-  };
-
-  const addMemberToList = () => {
-    if (
-      memberForm.name &&
-      memberForm.lastName &&
-      memberForm.id &&
-      memberForm.grade
-    ) {
-      setTeamMembers([...teamMembers, memberForm]);
-      setMemberForm({ name: "", lastName: "", id: "", grade: "" });
+  // Función para agregar un estudiante al equipo
+  const addStudentToTeam = () => {
+    if (selectedStudent !== null) {
+      // Agregar el estudiante seleccionado al equipo
+      const newTeamMembers = [...teamMembers, students[selectedStudent]];
+      setTeamMembers(newTeamMembers);
+      
+      // Remover el estudiante de la lista de estudiantes disponibles
+      const newStudents = students.filter((_, idx) => idx !== selectedStudent);
+      setStudents(newStudents);
+      
+      // Limpiar la selección
+      setSelectedStudent(null);
     }
   };
 
+  // Función para remover un miembro del equipo
   const removeMember = (index) => {
+    // Guardar el miembro que se va a remover
     const memberToReturn = teamMembers[index];
-    setTeamMembers(teamMembers.filter((_, i) => i !== index));
-    setStudents([...students, memberToReturn]);
+    
+    // Remover el miembro del equipo
+    const newTeamMembers = teamMembers.filter((_, i) => i !== index);
+    setTeamMembers(newTeamMembers);
+    
+    // Devolver el miembro a la lista de estudiantes
+    const newStudents = [...students, memberToReturn];
+    setStudents(newStudents);
   };
 
-  const handleSubmit = (e) => {
+  // Filtrar estudiantes según el buscador
+  const filteredStudents = students.filter(student =>
+    student.name?.toLowerCase().includes(studentSearch.toLowerCase()) ||
+    student.email?.toLowerCase().includes(studentSearch.toLowerCase())
+  );
+
+  // Función para enviar el formulario
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const finalData = {
+    
+    // Validar campos requeridos
+    if (!formData.title || !formData.area || !formData.objectives || 
+        !formData.schedule.startDate || !formData.schedule.endDate || 
+        !formData.budget || !formData.institution || teamMembers.length === 0) {
+      alert("Por favor, completa todos los campos requeridos");
+      return;
+    }
+
+    // Preparar los datos para enviar a la API
+    const projectData = {
       ...formData,
-      teamMembers,
+      teamMembers: teamMembers.map(member => ({
+        id: member._id,
+        grade: member.grade
+      }))
     };
-    console.log(finalData);
+
+    try {
+      const response = await createProject(projectData);
+      console.log(response);
+      
+      if (response.success) {
+        alert("¡Proyecto creado exitosamente!");
+        // Limpiar el formulario
+        setFormData({
+          title: "",
+          area: "",
+          objectives: "",
+          schedule: {
+            startDate: null,
+            endDate: null
+          },
+          budget: "",
+          institution: "",
+          observations: "",
+        });
+        setTeamMembers([]);
+        navigate("/list-projects");
+      } else {
+        alert("Error al crear el proyecto: " + response.message);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Hubo un error al crear el proyecto. Por favor, intenta de nuevo.");
+    }
   };
 
   return (
-    <Container maxWidth="lg" sx={{ py: 2 }}>
-      <Typography variant="h4" gutterBottom>
-        Formulario
+    <Container id="container">
+      <Typography variant="h4" component="h1" sx={{ color: '#1976d2', fontWeight: 'bold', mb: 2 }}>
+        Formulario de Proyecto
       </Typography>
 
-      {/* Datos generales */}
-
+      {/* Sección de información básica */}
       <div className="row-two">
         <TextField
           label="Título del Proyecto"
@@ -126,11 +187,10 @@ const CreateProject = () => {
           required
         />
 
-        <FormControl required sx={{ flex: 1 }}>
+        <FormControl required className="form-control">
           <InputLabel id="area-label">Área</InputLabel>
           <Select
             labelId="area-label"
-            id="area-select"
             name="area"
             value={formData.area}
             label="Área"
@@ -145,6 +205,7 @@ const CreateProject = () => {
         </FormControl>
       </div>
 
+      {/* Sección de objetivos */}
       <div className="row-full">
         <TextField
           label="Objetivos"
@@ -157,18 +218,18 @@ const CreateProject = () => {
         />
       </div>
 
+      {/* Sección de fechas, presupuesto e institución */}
       <div className="row-three">
-        {/* Cronograma usando el componente Calendar */}
         <Calendar
           startDate={formData.schedule.startDate}
           endDate={formData.schedule.endDate}
           onDateChange={handleDateChange}
         />
 
-        <FormControl required sx={{ flex: 1 }}>
-          <InputLabel htmlFor="outlined-adornment-amount">Presupuesto</InputLabel>
+        <FormControl required className="form-control">
+          <InputLabel htmlFor="budget">Presupuesto</InputLabel>
           <OutlinedInput
-            id="outlined-adornment-amount"
+            id="budget"
             name="budget"
             value={formData.budget}
             onChange={handleChange}
@@ -178,11 +239,10 @@ const CreateProject = () => {
           />
         </FormControl>
 
-        <FormControl required sx={{ flex: 1 }}>
+        <FormControl required className="form-control">
           <InputLabel id="institution-label">Institución</InputLabel>
           <Select
             labelId="institution-label"
-            id="institution-select"
             name="institution"
             value={formData.institution}
             label="Institución"
@@ -197,63 +257,61 @@ const CreateProject = () => {
         </FormControl>
       </div>
 
-      <Box display="flex" mt={4} gap={4}>
-        {/* Formulario de integrante */}
-        <Paper sx={{ p: 2, flex: 1 }}>
-          <Typography variant="h6">Estudiantes</Typography>
-          <List sx={{ width: '100%', maxWidth: 360, bgcolor: 'background.paper', mt: 2 }}>
-            {students.map((student, idx) => (
-              <React.Fragment key={student.id}>
+      {/* Sección de selección de equipo */}
+      <div className="team-container">
+        {/* Lista de estudiantes disponibles */}
+        <Paper className="student-paper">
+          <Typography variant="h6">Estudiantes Disponibles</Typography>
+          <List className="student-list-scroll">
+            {filteredStudents.map((student, idx) => (
+              <React.Fragment key={student._id}>
                 <ListItem
-                  alignItems="flex-start"
-                  className={selectedStudent === idx ? "student-selected" : "student-item"}
+                  className={`student-list-item ${selectedStudent === idx ? "student-selected" : "student-item"}`}
                   onClick={() => setSelectedStudent(idx)}
-                  sx={{ cursor: 'pointer' }}
                 >
                   <ListItemAvatar>
-                    <Avatar alt={student.name} src={student.avatar} />
+                    <Avatar className="student-avatar">
+                      <PersonIcon />
+                    </Avatar>
                   </ListItemAvatar>
                   <ListItemText
-                    primary={student.name}
-                    secondary={
-                      <Typography
-                        component="span"
-                        variant="body2"
-                        className="student-secondary"
-                        sx={{ display: 'inline' }}
-                      >
-                        ID: {student.id} | Grado: {student.grade}
-                      </Typography>
-                    }
+                    primary={<span className="student-name">{`${student.name} ${student.lastName}`}</span>}
+                    secondary={<span className="student-info">Email: {student.email}</span>}
                   />
                 </ListItem>
-                {idx < students.length - 1 && <Divider variant="inset" component="li" />}
+                {idx < filteredStudents.length - 1 && <Divider variant="inset" component="li" />}
               </React.Fragment>
             ))}
           </List>
+          {/* Buscador debajo de la lista */}
+          <div className="student-search-wrapper">
+            <span role="img" aria-label="Buscar">🔍</span>
+            <input
+              type="text"
+              className="student-search-input"
+              placeholder="Buscar estudiante..."
+              value={studentSearch}
+              onChange={e => setStudentSearch(e.target.value)}
+              aria-label="Buscar estudiante"
+            />
+          </div>
         </Paper>
 
-        {/* Botón central */}
-        <Box display="flex" alignItems="center">
+        {/* Botón para agregar estudiante */}
+        <div className="arrow-container">
           <IconButton
             color="primary"
-            onClick={() => {
-              if (selectedStudent !== null) {
-                setTeamMembers([...teamMembers, students[selectedStudent]]);
-                setStudents(students.filter((_, idx) => idx !== selectedStudent));
-                setSelectedStudent(null);
-              }
-            }}
+            onClick={addStudentToTeam}
             disabled={selectedStudent === null}
           >
             <ArrowForwardIcon />
           </IconButton>
-        </Box>
+        </div>
 
-        {/* Lista de integrantes */}
-        <Paper sx={{ p: 2, flex: 1 }}>
-          <Typography variant="h6">Integrantes del Equipo</Typography>
-          <List>
+        {/* Lista de miembros del equipo */}
+        <Paper className="team-paper">
+          <Typography variant="h6">Miembros del Equipo</Typography>
+          <List className="student-list-scroll team-list">
             {teamMembers.map((member, index) => (
               <ListItem
                 key={index}
@@ -263,16 +321,20 @@ const CreateProject = () => {
                   </IconButton>
                 }
               >
+                <ListItemAvatar>
+                  <Avatar alt={member.name} src={member.avatar} className="team-avatar" />
+                </ListItemAvatar>
                 <ListItemText
-                  primary={`${member.name} ${member.lastName}`}
-                  secondary={`ID: ${member.id} | Grado: ${member.grade}`}
+                  primary={<span className="team-name">{`${member.name} ${member.lastName}`}</span>}
+                  secondary={<span className="team-info">Email: {member.email}</span>}
                 />
               </ListItem>
             ))}
           </List>
         </Paper>
-      </Box>
+      </div>
 
+      {/* Campo de observaciones */}
       <TextField
         fullWidth
         multiline
@@ -281,15 +343,16 @@ const CreateProject = () => {
         name="observations"
         value={formData.observations}
         onChange={handleChange}
-        sx={{ mt: 4 }}
+        className="observations-field"
       />
 
+      {/* Botón de envío */}
       <Button
         variant="contained"
         color="primary"
         size="large"
         onClick={handleSubmit}
-        sx={{ mt: 3 }}
+        className="submit-button"
       >
         Crear Proyecto
       </Button>

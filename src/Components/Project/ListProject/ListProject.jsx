@@ -195,7 +195,10 @@ export default function ListProject() {
 
   return (
     <Box>
-      <div className="table-header-bar">
+      <div className="table-header-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <Typography variant="h4" component="h1" sx={{ color: '#1976d2', fontWeight: 'bold' }}>
+          Lista de Proyectos
+        </Typography>
         <div className="search-wrapper">
           <SearchIcon className="search-icon" />
           <input

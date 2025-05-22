@@ -28,6 +28,7 @@ const LoginForm = () => {
       if (response.success) {
         alert("Inicio de sesión exitoso");
         // Redirigir al usuario a la página de inicio o a otra página
+        console.log(response.body.data);
         localStorage.setItem("@token", response.body.data);
         navigate("/home");
         

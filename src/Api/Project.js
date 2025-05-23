@@ -40,11 +40,7 @@ export const createProject = async (body) => {
 export const getAllProjects = async () => {
     try {
         const response = await api.get("/project/all");
-        return {
-            success: true,
-            data: response.data,
-            message: "Proyectos obtenidos correctamente"
-        };
+        return response.data;
     } catch (error) {
         console.log('Error fetching projects:', error);
         return {
@@ -54,3 +50,40 @@ export const getAllProjects = async () => {
     }
 }
 
+export const updateProject = async (projectId, body) => {
+    try {
+        const projectData = {
+            title: body.title,
+            area: body.area,
+            objectives: body.objectives,
+            dateStart: body.schedule.startDate,
+            dateEnd: body.schedule.endDate,
+            budget: body.budget,
+            institution: body.institution,
+            team: body.teamMembers,
+            comments: body.observations
+        };
+
+        const response = await api.put(`/project/update/${projectId}`, projectData);
+        return response.data;
+    } catch (error) {
+        console.log('Error updating project:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Error al actualizar el proyecto'
+        };
+    }
+}
+
+export const deleteProject = async (projectId) => {
+    try {
+        const response = await api.delete(`/project/delete/${projectId}`);
+        return response.data;
+    } catch (error) {
+        console.log('Error deleting project:', error);
+        return {
+            success: false,
+            message: error.response?.data?.message || 'Error al eliminar el proyecto'
+        };
+    }
+}

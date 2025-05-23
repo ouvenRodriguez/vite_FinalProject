@@ -9,7 +9,7 @@ import RegisterEstudiante from './Components/Estudiantes/RegisterEstudiante/Regi
 import ListEstudiantes from './Components/Estudiantes/ListEstudiante/ListEstudiante';
 import RegisterDocente from './Components/Docentes/RegisterDocente/RegisterDocente';
 import ListDocentes from './Components/Docentes/ListDocente/ListDocentes';
-import Layout from './Components/Layout/Layout';
+import Plantilla from './Components/Plantilla/Plantilla';
 import Home from './Pages/Home/Home';
 const App = () => {
   return (
@@ -18,7 +18,7 @@ const App = () => {
       <Route path="/login" element={<Login />} />
       <Route path="/register" element={<Register />} />
 
-      <Route element={<Layout />}>
+      <Route element={<Plantilla />}>
         <Route path="/home" element={<Home />} />
         <Route path="/create-project" element={<CreateProject />} />
         <Route path="/list-projects" element={<ListProjects />} />

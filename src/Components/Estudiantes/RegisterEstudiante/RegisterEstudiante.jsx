@@ -8,8 +8,10 @@ import {
 } from "@mui/material";
 import { createEstudiante } from "../../../Api/user";
 import "./RegisterEstudiante.css";
+import { useNavigate } from "react-router-dom";
 
 const RegisterEstudiante = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",   
     lastName: "",
@@ -37,7 +39,8 @@ const RegisterEstudiante = () => {
       const response = await createEstudiante(formData);
       if (response.success) {
         alert("Estudiante registrado exitosamente");
-        // Aquí puedes agregar la redirección si es necesario
+        navigate("/list-estudiantes");
+       
       } else {
         alert(response.message || "Error al registrar estudiante. Inténtalo de nuevo.");
       }

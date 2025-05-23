@@ -24,55 +24,78 @@ import CreateNewFolderIcon from '@mui/icons-material/CreateNewFolder';
 import ListAltIcon from '@mui/icons-material/ListAlt';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import AccountCircleIcon from '@mui/icons-material/AccountCircle';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { useNavigate, Outlet } from 'react-router-dom';
-import './Layout.css';
+import './Plantilla.css';
 
 const drawerWidth = 260;
 
-const sidebarSections = [
-  {
-    title: 'Usuarios',
-    items: [
-      {
-        label: 'Docentes',
-        id: 'docentes',
-        icon: <HomeRepairServiceIcon />,
-        children: [
-          { label: 'Agregar', id: 'register-docente', icon: <CreateNewFolderIcon /> },
-          { label: 'Todos', id: 'list-docentes', icon: <ListAltIcon /> }
-        ]
-      },
-      {
-        label: 'Estudiantes',
-        id: 'estudiantes',
-        icon: <SchoolIcon />,
-        children: [
-          { label: 'Agregar', id: 'register-estudiante', icon: <CreateNewFolderIcon /> },
-          { label: 'Todos', id: 'list-estudiantes', icon: <ListAltIcon /> }
-        ]
-      }
-    ]
-  },
-  {
-    title: 'Proyectos',
-    items: [
-      {
-        label: 'Proyectos',
-        id: 'proyectos',
-        icon: <BarChartIcon />,
-        children: [
-          { label: 'Crear', id: 'create-project', icon: <CreateNewFolderIcon /> },
-          { label: 'Todos', id: 'list-projects', icon: <ListAltIcon /> }
-        ]
-      },
-    ],
-  },
-];
+const getSidebarSections = (role) => {
+  const allSections = [
+    {
+      title: 'Usuarios',
+      items: [
+        {
+          label: 'Docentes',
+          id: 'docentes',
+          icon: <HomeRepairServiceIcon />,
+          roles: ['Coordinador'],
+          children: [
+            { label: 'Agregar', id: 'register-docente', icon: <CreateNewFolderIcon />, roles: ['Coordinador'] },
+            { label: 'Todos', id: 'list-docentes', icon: <ListAltIcon />, roles: ['Coordinador'] }
+          ]
+        },
+        {
+          label: 'Estudiantes',
+          id: 'estudiantes',
+          icon: <SchoolIcon />,
+          roles: ['Profesor', 'Coordinador'],
+          children: [
+            { label: 'Agregar', id: 'register-estudiante', icon: <CreateNewFolderIcon />, roles: ['Profesor', 'Coordinador'] },
+            { label: 'Todos', id: 'list-estudiantes', icon: <ListAltIcon />, roles: ['Profesor', 'Coordinador'] }
+          ]
+        }
+      ]
+    },
+    {
+      title: 'Proyectos',
+      items: [
+        {
+          label: 'Proyectos',
+          id: 'proyectos',
+          icon: <BarChartIcon />,
+          roles: ['Profesor', 'Coordinador'],
+          children: [
+            { label: 'Crear', id: 'create-project', icon: <CreateNewFolderIcon />, roles: ['Profesor'] },
+            { label: 'Todos', id: 'list-projects', icon: <ListAltIcon />, roles: ['Profesor', 'Coordinador'] }
+          ]
+        },
+      ],
+    },
+  ];
+
+  // Filter sections based on role
+  return allSections.map(section => ({
+    ...section,
+    items: section.items
+      .filter(item => item.roles.includes(role))
+      .map(item => ({
+        ...item,
+        children: item.children ? item.children.filter(child => child.roles.includes(role)) : undefined
+      }))
+  })).filter(section => section.items.length > 0);
+};
 
 const Layout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expandedItems, setExpandedItems] = useState({});
+  const [anchorEl, setAnchorEl] = useState(null);
   const navigate = useNavigate();
+
+  const role = localStorage.getItem('@role') || 'Estudiante';
+  const sidebarSections = getSidebarSections(role);
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -88,6 +111,20 @@ const Layout = () => {
   const handleNavigation = (path) => {
     navigate(`/${path}`);
     setMobileOpen(false);
+  };
+
+  const handleMenu = (event) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('@token');
+    handleClose();
+    navigate('/login');
   };
 
   const drawer = (
@@ -170,6 +207,35 @@ const Layout = () => {
             <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
               Toolpad
             </Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            <IconButton
+              size="large"
+              aria-label="account of current user"
+              aria-controls="menu-appbar"
+              aria-haspopup="true"
+              onClick={handleMenu}
+              color="inherit"
+              sx={{ ml: 140 }}
+            >
+              <AccountCircleIcon />
+            </IconButton>
+            <Menu
+              id="menu-appbar"
+              anchorEl={anchorEl}
+              anchorOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              keepMounted
+              transformOrigin={{
+                vertical: 'top',
+                horizontal: 'right',
+              }}
+              open={Boolean(anchorEl)}
+              onClose={handleClose}
+            >
+              <MenuItem onClick={handleLogout}>Cerrar Sesión</MenuItem>
+            </Menu>
           </Toolbar>
         </AppBar>
 

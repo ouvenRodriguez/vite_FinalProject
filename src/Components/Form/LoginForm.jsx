@@ -29,7 +29,8 @@ const LoginForm = () => {
         alert("Inicio de sesión exitoso");
         // Redirigir al usuario a la página de inicio o a otra página
         console.log(response.body.data);
-        localStorage.setItem("@token", response.body.data);
+        localStorage.setItem("@token", response.body.data.token);
+        localStorage.setItem("@role", response.body.data.role);
         navigate("/home");
         
       } else {

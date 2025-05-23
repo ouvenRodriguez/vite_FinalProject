@@ -8,8 +8,10 @@ import {
 } from "@mui/material";
 import { createDocente } from "../../../Api/user";
 import "./RegisterDocente.css";
+import { useNavigate } from "react-router-dom";
 
 const RegisterDocente = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     name: "",
     lastName: "",
@@ -37,7 +39,8 @@ const RegisterDocente = () => {
       const response = await createDocente(formData);
       if (response.success) {
         alert("Docente registrado exitosamente");
-        // Aquí puedes agregar la redirección si es necesario
+        navigate("/list-docentes");
+       
       } else {
         alert(response.message || "Error al registrar docente. Inténtalo de nuevo.");
       }

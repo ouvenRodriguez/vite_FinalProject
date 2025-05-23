@@ -18,6 +18,23 @@ import Stack from '@mui/material/Stack';
 import DeleteForeverIcon from '@mui/icons-material/DeleteForever';
 import EditIcon from '@mui/icons-material/Edit';
 import SearchIcon from '@mui/icons-material/Search';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import TextField from '@mui/material/TextField';
+import Button from '@mui/material/Button';
+import Alert from '@mui/material/Alert';
+import Snackbar from '@mui/material/Snackbar';
+import FormControl from '@mui/material/FormControl';
+import InputLabel from '@mui/material/InputLabel';
+import Select from '@mui/material/Select';
+import MenuItem from '@mui/material/MenuItem';
+import OutlinedInput from '@mui/material/OutlinedInput';
+import InputAdornment from '@mui/material/InputAdornment';
+import Calendar from '../../Calendar/Calendar';
+import dayjs from 'dayjs';
+import { getAllProjects, updateProject, deleteProject } from '../../../Api/Project';
 import './ListProject.css';
 
 
@@ -57,34 +74,369 @@ function LinearWithValueLabel() {
   );
 }
 
-// Datos de ejemplo
-function createData(name, calories, fat, carbs, protein, price) {
-  return {
-    name,
-    calories,
-    fat,
-    carbs,
-    protein,
-    price,
-    history: [
-      {
-        date: "2020-01-05",
-        customerId: "11091700",
-        amount: 3,
-      },
-      {
-        date: "2020-01-02",
-        customerId: "Anonymous",
-        amount: 1,
-      },
-    ],
+// Edit Modal Component
+function EditModal({ open, handleClose, project, onSave }) {
+  const [formData, setFormData] = React.useState({
+    title: '',
+    area: '',
+    objectives: '',
+    schedule: {
+      startDate: null,
+      endDate: null
+    },
+    budget: '',
+    institution: '',
+    teamMembers: [],
+    observations: ''
+  });
+
+  React.useEffect(() => {
+    if (project) {
+      setFormData({
+        title: project.title || '',
+        area: project.area || '',
+        objectives: project.objectives || '',
+        schedule: {
+          startDate: project.dateStart ? dayjs(project.dateStart) : null,
+          endDate: project.dateEnd ? dayjs(project.dateEnd) : null
+        },
+        budget: project.budget || '',
+        institution: project.institution || '',
+        teamMembers: project.team || [],
+        observations: project.comments || ''
+      });
+    }
+  }, [project]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
+
+  const handleDateChange = (type, date) => {
+    setFormData(prev => ({
+      ...prev,
+      schedule: {
+        ...prev.schedule,
+        [type]: date
+      }
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validar campos requeridos
+    if (!formData.title || !formData.area || !formData.objectives || 
+        !formData.schedule.startDate || !formData.schedule.endDate || 
+        !formData.budget || !formData.institution) {
+      setSnackbar({
+        open: true,
+        message: 'Por favor, completa todos los campos requeridos',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // Preparar los datos para enviar
+    const projectData = {
+      ...formData,
+      schedule: {
+        startDate: formData.schedule.startDate.toISOString(),
+        endDate: formData.schedule.endDate.toISOString()
+      }
+    };
+
+    await onSave(projectData);
+    handleClose();
+  };
+
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      className="edit-modal"
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>
+        Editar Proyecto
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+          {/* Título y Área */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField
+              label="Título del Proyecto"
+              name="title"
+              value={formData.title}
+              onChange={handleChange}
+              fullWidth
+              required
+              variant="outlined"
+              InputProps={{
+                sx: { borderRadius: 2 }
+              }}
+            />
+
+            <FormControl required fullWidth>
+              <InputLabel id="area-label">Área</InputLabel>
+              <Select
+                labelId="area-label"
+                name="area"
+                value={formData.area}
+                label="Área"
+                onChange={handleChange}
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="Tecnología">Tecnología</MenuItem>
+                <MenuItem value="Ciencias">Ciencias</MenuItem>
+                <MenuItem value="Matemáticas">Matemáticas</MenuItem>
+                <MenuItem value="Humanidades">Humanidades</MenuItem>
+                <MenuItem value="Artes">Artes</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Objetivos */}
+          <TextField
+            label="Objetivos"
+            name="objectives"
+            value={formData.objectives}
+            onChange={handleChange}
+            fullWidth
+            multiline
+            rows={3}
+            required
+            variant="outlined"
+            InputProps={{
+              sx: { borderRadius: 2 }
+            }}
+          />
+
+          {/* Fechas, Presupuesto e Institución */}
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <Box sx={{ flex: 1 }}>
+              <Calendar
+                startDate={formData.schedule.startDate}
+                endDate={formData.schedule.endDate}
+                onDateChange={handleDateChange}
+              />
+            </Box>
+
+            <FormControl required fullWidth>
+              <InputLabel htmlFor="budget">Presupuesto</InputLabel>
+              <OutlinedInput
+                id="budget"
+                name="budget"
+                value={formData.budget}
+                onChange={handleChange}
+                startAdornment={<InputAdornment position="start">$</InputAdornment>}
+                label="Presupuesto"
+                type="number"
+                sx={{ borderRadius: 2 }}
+              />
+            </FormControl>
+
+            <FormControl required fullWidth>
+              <InputLabel id="institution-label">Institución</InputLabel>
+              <Select
+                labelId="institution-label"
+                name="institution"
+                value={formData.institution}
+                label="Institución"
+                onChange={handleChange}
+                sx={{ borderRadius: 2 }}
+              >
+                <MenuItem value="Universidad Nacional">Universidad Nacional</MenuItem>
+                <MenuItem value="Universidad de Antioquia">Universidad de Antioquia</MenuItem>
+                <MenuItem value="Universidad de Medellín">Universidad de Medellín</MenuItem>
+                <MenuItem value="Universidad EAFIT">Universidad EAFIT</MenuItem>
+                <MenuItem value="Universidad Pontificia Bolivariana">Universidad Pontificia Bolivariana</MenuItem>
+              </Select>
+            </FormControl>
+          </Box>
+
+          {/* Observaciones */}
+          <TextField
+            label="Observaciones Adicionales"
+            name="observations"
+            value={formData.observations}
+            onChange={handleChange}
+            fullWidth
+            multiline
+            rows={4}
+            variant="outlined"
+            InputProps={{
+              sx: { borderRadius: 2 }
+            }}
+          />
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={handleClose}
+          variant="outlined"
+          sx={{ 
+            mr: 1,
+            '&:hover': {
+              backgroundColor: 'rgba(25, 118, 210, 0.04)'
+            }
+          }}
+        >
+          Cancelar
+        </Button>
+        <Button 
+          onClick={handleSubmit} 
+          variant="contained"
+          sx={{
+            '&:hover': {
+              backgroundColor: '#1565c0'
+            }
+          }}
+        >
+          Guardar Cambios
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+// Info Modal Component
+function InfoModal({ open, handleClose, project }) {
+  return (
+    <Dialog 
+      open={open} 
+      onClose={handleClose}
+      className="info-modal"
+      maxWidth="md"
+      fullWidth
+    >
+      <DialogTitle>
+        Información Detallada del Proyecto
+      </DialogTitle>
+      <DialogContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Información General */}
+          <div className="data-section">
+            <Typography className="data-header">Información General</Typography>
+            <div className="data-row">
+              <Typography className="data-label">Título:</Typography>
+              <Typography className="data-value">{project.title}</Typography>
+            </div>
+            <div className="data-row">
+              <Typography className="data-label">Área:</Typography>
+              <Typography className="data-value">{project.area}</Typography>
+            </div>
+            <div className="data-row">
+              <Typography className="data-label">Institución:</Typography>
+              <Typography className="data-value">{project.institution}</Typography>
+            </div>
+            <div className="data-row">
+              <Typography className="data-label">Estado:</Typography>
+              <Typography className="data-value">{project.status}</Typography>
+            </div>
+          </div>
+
+          {/* Cronograma y Presupuesto */}
+          <div className="data-section">
+            <Typography className="data-header">Cronograma y Presupuesto</Typography>
+            <div className="data-row">
+              <Typography className="data-label">Fecha de Inicio:</Typography>
+              <Typography className="data-value">
+                {new Date(project.dateStart).toLocaleDateString()}
+              </Typography>
+            </div>
+            <div className="data-row">
+              <Typography className="data-label">Fecha de Finalización:</Typography>
+              <Typography className="data-value">
+                {new Date(project.dateEnd).toLocaleDateString()}
+              </Typography>
+            </div>
+            <div className="data-row">
+              <Typography className="data-label">Presupuesto:</Typography>
+              <Typography className="data-value">
+                ${project.budget.toLocaleString()}
+              </Typography>
+            </div>
+          </div>
+
+          {/* Objetivos */}
+          <div className="data-section">
+            <Typography className="data-header">Objetivos</Typography>
+            <div className="data-row">
+              <Typography className="data-value long-text">
+                {project.objectives}
+              </Typography>
+            </div>
+          </div>
+
+          {/* Equipo */}
+          <div className="data-section">
+            <Typography className="data-header">Equipo</Typography>
+            <div className="data-row">
+              <div className="team-list">
+                {Array.isArray(project.team) ? project.team.map((member, index) => (
+                  <span key={index} className="team-member">
+                    {member.name}
+                  </span>
+                )) : (
+                  <Typography className="data-value">No hay miembros asignados</Typography>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Observaciones */}
+          {project.comments && (
+            <div className="data-section">
+              <Typography className="data-header">Observaciones</Typography>
+              <div className="data-row">
+                <Typography className="data-value long-text">
+                  {project.comments}
+                </Typography>
+              </div>
+            </div>
+          )}
+        </Box>
+      </DialogContent>
+      <DialogActions>
+        <Button 
+          onClick={handleClose}
+          variant="contained"
+        >
+          Cerrar
+        </Button>
+      </DialogActions>
+    </Dialog>
+  );
 }
 
 // Fila con expansión
 function Row(props) {
-  const { row } = props;
+  const { row, onEdit, onDelete } = props;
   const [open, setOpen] = React.useState(false);
+  const [editModalOpen, setEditModalOpen] = React.useState(false);
+  const [infoModalOpen, setInfoModalOpen] = React.useState(false);
+
+  // Función para formatear los nombres del equipo
+  const formatTeamNames = (team) => {
+    if (!Array.isArray(team)) return '';
+    return team.map(member => member.name).join(', ');
+  };
+
+  const handleEdit = () => {
+    setEditModalOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este proyecto?')) {
+      await onDelete(row._id);
+    }
+  };
 
   return (
     <React.Fragment>
@@ -99,18 +451,18 @@ function Row(props) {
           </IconButton>
         </TableCell>
         <TableCell component="th" scope="row">
-          {row.name}
+          {row.title}
         </TableCell>
-        <TableCell align="center">{row.calories}</TableCell>
-        <TableCell align="center">{row.fat}</TableCell>
-        <TableCell align="center">{row.carbs}</TableCell>
-        <TableCell align="center">{row.protein}</TableCell>
+        <TableCell align="center">{row.area}</TableCell>
+        <TableCell align="center">{row.institution}</TableCell>
+        <TableCell align="center">{`${new Date(row.dateStart).toLocaleDateString()} - ${new Date(row.dateEnd).toLocaleDateString()}`}</TableCell>
+        <TableCell align="center">{row.status}</TableCell>
         <TableCell>
           <div className="actions-container">
-            <button className="edit-button">
+            <button className="edit-button" onClick={handleEdit}>
               <EditIcon className="edit-icon" />
             </button>
-            <button className="delete-button">
+            <button className="delete-button" onClick={handleDelete}>
               <DeleteForeverIcon className="delete-icon" />
             </button>
           </div>
@@ -121,77 +473,191 @@ function Row(props) {
           <Collapse in={open} timeout="auto" unmountOnExit>
             <Box sx={{ margin: 1 }}>
               <Typography variant="h6" component="div">
-                Historial
+                Detalles del Proyecto
               </Typography>
 
-              <Table size="small" aria-label="purchases">
+              <Table size="small" aria-label="project details">
                 <TableHead>
                   <TableRow>
-                    <TableCell>Fecha</TableCell>
-                    <TableCell>Descripción</TableCell>
-                    <TableCell align="right">Avance</TableCell>
+                    <TableCell>Objetivos</TableCell>
+                    <TableCell>Equipo</TableCell>
+                    <TableCell align="right">Presupuesto</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {row.history.map((historyRow) => (
-                    <TableRow key={historyRow.date}>
-                      <TableCell>{historyRow.date}</TableCell>
-                      <TableCell>{historyRow.customerId}</TableCell>
-                      <TableCell align="right">
-                        {Math.round(historyRow.amount * row.price * 100) / 100}
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                  <TableRow>
+                    <TableCell>{row.objectives}</TableCell>
+                    <TableCell>{formatTeamNames(row.team)}</TableCell>
+                    <TableCell align="right">{row.budget}</TableCell>
+                  </TableRow>
                 </TableBody>
               </Table>
 
-              {/* Componente de barra de progreso */}
               <Box sx={{ mt: 2 }}>
                 <div className="header-info">
                   <Typography variant="subtitle1" gutterBottom>
                     Progreso del Proyecto
                   </Typography>
-                  <button className="button-info">Más información</button>
+                  <button 
+                    className="button-info"
+                    onClick={() => setInfoModalOpen(true)}
+                  >
+                    Más información
+                  </button>
                 </div>
-                <LinearWithValueLabel />
+                <LinearProgressWithLabel value={20} />
               </Box>
             </Box>
           </Collapse>
         </TableCell>
       </TableRow>
+      <EditModal
+        open={editModalOpen}
+        handleClose={() => setEditModalOpen(false)}
+        project={row}
+        onSave={(formData) => onEdit(formData)}
+      />
+      <InfoModal
+        open={infoModalOpen}
+        handleClose={() => setInfoModalOpen(false)}
+        project={row}
+      />
     </React.Fragment>
   );
 }
-
-// Datos de ejemplo
-const rows = [
-  createData("Frozen yoghurt", 159, 6.0, 24, 4.0, 3.99),
-  createData("Ice cream sandwich", 237, 9.0, 37, 4.3, 4.99),
-  createData("Eclair", 262, 16.0, 24, 6.0, 3.79),
-  createData("Cupcake", 305, 3.7, 67, 4.3, 2.5),
-  createData("Gingerbread", 356, 16.0, 49, 3.9, 1.5),
-
-];
 
 // Componente principal
 export default function ListProject() {
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState("");
+  const [projects, setProjects] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+  const [snackbar, setSnackbar] = React.useState({
+    open: false,
+    message: '',
+    severity: 'success'
+  });
   const rowsPerPage = 5;
 
-  // Lógica básica: filtrar solo por coincidencia directa
-  const filteredRows = rows.filter(row =>
-    row.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const fetchProjects = async () => {
+    try {
+      const response = await getAllProjects();
+      if (response.success && response.body.data) {
+        setProjects(response.body.data);
+      } else {
+        setProjects([]);
+        setSnackbar({
+          open: true,
+          message: 'Error al cargar los proyectos',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      setProjects([]);
+      setSnackbar({
+        open: true,
+        message: 'Error al cargar los proyectos',
+        severity: 'error'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  React.useEffect(() => {
+    fetchProjects();
+  }, []);
+
+  const handleEdit = async (projectId, formData) => {
+    try {
+      setSnackbar({
+        open: true,
+        message: 'Guardando cambios...',
+        severity: 'info'
+      });
+
+      const response = await updateProject(projectId, formData);
+      if (response.success) {
+        await fetchProjects();
+        setSnackbar({
+          open: true,
+          message: 'Proyecto actualizado correctamente',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: 'Error al actualizar el proyecto',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error updating project:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al actualizar el proyecto',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleDelete = async (projectId) => {
+    try {
+      setSnackbar({
+        open: true,
+        message: 'Eliminando proyecto...',
+        severity: 'info'
+      });
+
+      const response = await deleteProject(projectId);
+      if (response.success) {
+        await fetchProjects();
+        setSnackbar({
+          open: true,
+          message: 'Proyecto eliminado correctamente',
+          severity: 'success'
+        });
+      } else {
+        setSnackbar({
+          open: true,
+          message: 'Error al eliminar el proyecto',
+          severity: 'error'
+        });
+      }
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      setSnackbar({
+        open: true,
+        message: 'Error al eliminar el proyecto',
+        severity: 'error'
+      });
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar(prev => ({ ...prev, open: false }));
+  };
+
+  // Lógica de filtrado
+  const filteredProjects = Array.isArray(projects) ? projects.filter(project =>
+    project.title?.toLowerCase().includes(search.toLowerCase())
+  ) : [];
 
   // Calcular el índice inicial y final para la paginación
   const indexOfLastRow = page * rowsPerPage;
   const indexOfFirstRow = indexOfLastRow - rowsPerPage;
-  const currentRows = filteredRows.slice(indexOfFirstRow, indexOfLastRow);
+  const currentProjects = filteredProjects.slice(indexOfFirstRow, indexOfLastRow);
 
   const handlePageChange = (event, value) => {
     setPage(value);
   };
+
+  if (loading) {
+    return <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+      <Typography>Cargando proyectos...</Typography>
+    </Box>;
+  }
 
   return (
     <Box>
@@ -224,8 +690,13 @@ export default function ListProject() {
             </TableRow>
           </TableHead>
           <TableBody>
-            {currentRows.map((row) => (
-              <Row key={row.name} row={row} />
+            {currentProjects.map((project) => (
+              <Row 
+                key={project._id} 
+                row={project} 
+                onEdit={(formData) => handleEdit(project._id, formData)}
+                onDelete={handleDelete}
+              />
             ))}
           </TableBody>
         </Table>
@@ -233,13 +704,27 @@ export default function ListProject() {
       <Box sx={{ display: 'flex', justifyContent: 'right', mt: 3, mb: 2 }}>
         <Stack spacing={2}>
           <Pagination
-            count={Math.ceil(filteredRows.length / rowsPerPage)}
+            count={Math.ceil(filteredProjects.length / rowsPerPage)}
             page={page}
             onChange={handlePageChange}
             color="primary"
           />
         </Stack>
       </Box>
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={3000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: '100%' }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }
